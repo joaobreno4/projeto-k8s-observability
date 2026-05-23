@@ -1,0 +1,5 @@
+.minikube/
+.kube/
+*.tar
+__pycache__/
+.pytest_cache/

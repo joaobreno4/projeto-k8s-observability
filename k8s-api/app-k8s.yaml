@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  labels:
+    app: api-fastapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-fastapi
+  template:
+    metadata:
+      labels:
+        app: api-fastapi
+    spec:
+      containers:
+      - name: api-container
+        image: api-autoscale:v1
+        imagePullPolicy: IfNotPresent # Como injetamos a imagem com o "kind load", ele vai ler perfeitamente
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "50m"   # Consumo base planejado baixo para facilitar o teste de estresse
+            memory: "64Mi"
+          limits:
+            cpu: "100m"  # Limite máximo por pod
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  type: ClusterIP # Padrão ideal para segurança e uso com Ingress/Port-forward
+  selector:
+    app: api-fastapi
+  ports:
+  - port: 8000
+    targetPort: 8000
