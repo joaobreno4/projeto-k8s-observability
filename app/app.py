@@ -1,34 +1,39 @@
-from fastapi import FastAPI, Depends
-import sqlite3
-import os
+import math
+import logging
+from fastapi import FastAPI
 
-app = FastAPI(title="DevSecOps Lab API")
-print("--- Inicializando App do Laboratório DevSecOps ---")
+# Configuração básica de logs para o Filebeat capturar no stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("api-logger")
 
-# Banco de dados em memória para testes rápidos
-def get_db():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-    cursor.execute("CREATE TABLE users (id INTEGER, username TEXT, password TEXT)")
-    cursor.execute("INSERT INTO users VALUES (1, 'admin', 'admin123')")
-    conn.commit()
-    try:
-        yield cursor
-    finally:
-        conn.close()
+app = FastAPI(
+    title="DevSecOps Lab API",
+    description="API FastAPI com capacidade de estresse de CPU para testes de HPA e Observabilidade.",
+    version="2.0.0"
+)
 
 @app.get("/")
 def read_root():
-    return {"status": "healthy", "message": "Pipeline DevSecOps Ativo e Seguro!"}
+    logger.info("Requisição recebida em GET / - Iniciando processamento de estresse.")
+    
+    # Loop de estresse artificial para forçar consumo de CPU real (1 milhão de iterações)
+    stress_factor = 0.0001
+    for i in range(1000000):
+        stress_factor += math.sin(i) * math.cos(i)
+        
+    logger.info(f"Processamento concluído com sucesso. Fator de estresse calculado: {stress_factor}")
+    
+    return {
+        "status": "healthy",
+        "message": "Pipeline DevSecOps Ativo e Seguro!",
+        "stress_factor": stress_factor
+    }
 
-# Query parametrizada 100% segura contra SQL Injection
-@app.get("/login")
-def login(username: str, db = Depends(get_db)):
-    # O caractere '?' age como um placeholder. O SQLite garante que o input
-    # será tratado estritamente como um dado, e nunca como código executável.
-    query = "SELECT * FROM users WHERE username = ?"
-    db.execute(query, (username,))
-    user = db.fetchone()
-    if user:
-        return {"success": True, "user": user[1]}
-    return {"success": False, "message": "Usuário não encontrado"}
+@app.get("/health")
+def health_check():
+    # Rota leve de health check caso o Kubernetes precise testar a saúde do Pod sem gerar carga
+    return {"status": "UP"}
